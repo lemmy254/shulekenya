@@ -246,7 +246,7 @@ export default function Dashboard() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, flexWrap: 'wrap', gap: 16 }}>
           <div>
             <h1 style={{ fontSize: '1.8rem', fontWeight: 700 }}>School Dashboard</h1>
-            <p style={{ color: 'var(--text-secondary)' }}>{school.name} â {school.county}</p>
+            <p style={{ color: 'var(--text-secondary)' }}>{school.name} - {school.county}</p>
           </div>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
             {school.review_status === 'approved' && school.is_published && (
@@ -299,7 +299,7 @@ export default function Dashboard() {
         <div className="dash-stats">
           <div className="dash-stat"><div className="number">{enquiries.length}</div><div className="label">Enquiries</div></div>
           <div className="dash-stat"><div className="number">{unreadEnquiries}</div><div className="label">Unread</div></div>
-          <div className="dash-stat"><div className="number">{school.avg_rating || 'â'}</div><div className="label">Avg Rating</div></div>
+          <div className="dash-stat"><div className="number">{school.avg_rating || '-'}</div><div className="label">Avg Rating</div></div>
           <div className="dash-stat"><div className="number">{reviews.length}</div><div className="label">Reviews</div></div>
         </div>
 
