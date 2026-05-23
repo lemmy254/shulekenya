@@ -17,6 +17,11 @@ export default function Dashboard() {
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState('')
   const [uploading, setUploading] = useState(false)
+  const [noSchool, setNoSchool] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [newSchool, setNewSchool] = useState({
+    name: '', county: '', area: '', school_type: '', curriculum: [], boarding: 'Day', gender: 'Mixed', phone: ''
+  })
 
   useEffect(() => {
     checkAuth()
@@ -37,7 +42,44 @@ export default function Dashboard() {
     if (schools?.length > 0) {
       setSchool(schools[0])
       loadSchoolData(schools[0].id)
+    } else {
+      // Check if school info was saved during registration (before email confirm)
+      try {
+        const pending = localStorage.getItem('pendingSchool')
+        if (pending) {
+          const schoolData = JSON.parse(pending)
+          const { data, error } = await supabase.from('schools').insert({
+            owner_id: user.id,
+            ...schoolData,
+            is_published: false,
+          }).select().single()
+          if (!error && data) {
+            localStorage.removeItem('pendingSchool')
+            setSchool(data)
+            loadSchoolData(data.id)
+            return
+          }
+        }
+      } catch (e) { /* ignore parse errors */ }
+      setNoSchool(true)
     }
+  }
+
+  async function createSchoolNow(e) {
+    e.preventDefault()
+    setCreating(true)
+    const { data, error } = await supabase.from('schools').insert({
+      owner_id: user.id,
+      ...newSchool,
+      email: user.email,
+      is_published: false,
+    }).select().single()
+    if (!error && data) {
+      setSchool(data)
+      setNoSchool(false)
+      loadSchoolData(data.id)
+    }
+    setCreating(false)
   }
 
   async function loadSchoolData(schoolId) {
@@ -146,7 +188,51 @@ export default function Dashboard() {
     setFees(fees.filter((_, i) => i !== index))
   }
 
-  if (!school) return <div className="loading" style={{ minHeight: '50vh' }}>Loading dashboard...</div>
+  if (!school && !noSchool) return <div className="loading" style={{ minHeight: '50vh' }}>Loading dashboard...</div>
+
+  if (noSchool) return (
+    <>
+      <Head><title>Complete Registration | ShuleKenya</title></Head>
+      <div style={{ maxWidth: 600, margin: '0 auto', padding: '40px 24px' }}>
+        <div className="detail-section">
+          <h3>Complete Your School Registration</h3>
+          <p style={{ color: 'var(--text-secondary)', marginBottom: 24 }}>
+            Your account is verified. Now add your school details to get started.
+          </p>
+          <form onSubmit={createSchoolNow}>
+            <div className="form-group"><label>School Name *</label>
+              <input required value={newSchool.name} onChange={e => setNewSchool({...newSchool, name: e.target.value})} placeholder="e.g. Greenfield Academy" />
+            </div>
+            <div className="form-row">
+              <div className="form-group"><label>County *</label>
+                <select required value={newSchool.county} onChange={e => setNewSchool({...newSchool, county: e.target.value})}>
+                  <option value="">Select county</option>
+                  {counties.sort((a,b)=>a.name.localeCompare(b.name)).map(c => <option key={c.slug} value={c.name}>{c.name}</option>)}
+                </select>
+              </div>
+              <div className="form-group"><label>Area / Town *</label>
+                <input required value={newSchool.area} onChange={e => setNewSchool({...newSchool, area: e.target.value})} placeholder="e.g. Westlands" />
+              </div>
+            </div>
+            <div className="form-row">
+              <div className="form-group"><label>School Type *</label>
+                <select required value={newSchool.school_type} onChange={e => setNewSchool({...newSchool, school_type: e.target.value})}>
+                  <option value="">Select</option>
+                  {schoolTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="form-group"><label>Phone *</label>
+                <input required value={newSchool.phone} onChange={e => setNewSchool({...newSchool, phone: e.target.value})} placeholder="+254 7XX XXX XXX" />
+              </div>
+            </div>
+            <button type="submit" className="btn btn-primary btn-full" disabled={creating}>
+              {creating ? 'Creating...' : 'Create School & Continue'}
+            </button>
+          </form>
+        </div>
+      </div>
+    </>
+  )
 
   const unreadEnquiries = enquiries.filter(e => !e.is_read).length
 
@@ -159,7 +245,7 @@ export default function Dashboard() {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32, flexWrap: 'wrap', gap: 16 }}>
           <div>
             <h1 style={{ fontSize: '1.8rem', fontWeight: 700 }}>School Dashboard</h1>
-            <p style={{ color: 'var(--text-secondary)' }}>{school.name} — {school.county}</p>
+            <p style={{ color: 'var(--text-secondary)' }}>{school.name} â {school.county}</p>
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
             <button className="btn btn-outline" onClick={publishSchool}>
@@ -190,7 +276,7 @@ export default function Dashboard() {
         <div className="dash-stats">
           <div className="dash-stat"><div className="number">{enquiries.length}</div><div className="label">Enquiries</div></div>
           <div className="dash-stat"><div className="number">{unreadEnquiries}</div><div className="label">Unread</div></div>
-          <div className="dash-stat"><div className="number">{school.avg_rating || '—'}</div><div className="label">Avg Rating</div></div>
+          <div className="dash-stat"><div className="number">{school.avg_rating || 'â'}</div><div className="label">Avg Rating</div></div>
           <div className="dash-stat"><div className="number">{reviews.length}</div><div className="label">Reviews</div></div>
         </div>
 
@@ -388,7 +474,7 @@ export default function Dashboard() {
             <h4 style={{ marginBottom: 12 }}>Photo Gallery</h4>
             <div className="photo-grid">
               {(school.photos || []).map((p, i) => (
-                <div key={i} className="photo-item" style={{ backgroundImage: `url(${getPhotoUrl(p)})`, background: 'var(--primary-light)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
+                <div key={i} className="photo-item" style={{ backgroundImage: `url(${getPhotoUrl(p)})`, backgroundColor: 'var(--primary-light)', backgroundSize: 'cover', backgroundPosition: 'center' }}>
                   <button className="delete-btn" onClick={() => deletePhoto(p)}>&#x2716;</button>
                 </div>
               ))}
