@@ -41,6 +41,9 @@ export default function Register() {
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: account.email,
       password: account.password,
+      options: {
+        emailRedirectTo: 'https://shulekenya.netlify.app/dashboard?welcome=1',
+      },
     })
 
     if (authError) {
@@ -49,30 +52,47 @@ export default function Register() {
       return
     }
 
-    // 2. Create school record
-    const { error: schoolError } = await supabase.from('schools').insert({
-      owner_id: authData.user.id,
-      name: school.name,
-      county: school.county,
-      sub_county: school.sub_county,
-      area: school.area,
-      school_type: school.school_type,
-      curriculum: school.curriculum,
-      boarding: school.boarding,
-      gender: school.gender,
-      phone: school.phone,
-      email: school.email || account.email,
-      whatsapp: school.whatsapp,
-      is_published: false, // Draft until they complete profile
-    })
+    // 2. Save school info locally â will be created after email confirmation
+    try {
+      localStorage.setItem('pendingSchool', JSON.stringify({
+        name: school.name,
+        county: school.county,
+        sub_county: school.sub_county,
+        area: school.area,
+        school_type: school.school_type,
+        curriculum: school.curriculum,
+        boarding: school.boarding,
+        gender: school.gender,
+        phone: school.phone,
+        email: school.email || account.email,
+        whatsapp: school.whatsapp,
+      }))
+    } catch (e) { /* localStorage unavailable */ }
 
-    if (schoolError) {
-      setError(schoolError.message)
-      setLoading(false)
-      return
+    // 3. Try to create school record (works if session is available)
+    if (authData.session) {
+      await supabase.from('schools').insert({
+        owner_id: authData.user.id,
+        name: school.name,
+        county: school.county,
+        sub_county: school.sub_county,
+        area: school.area,
+        school_type: school.school_type,
+        curriculum: school.curriculum,
+        boarding: school.boarding,
+        gender: school.gender,
+        phone: school.phone,
+        email: school.email || account.email,
+        whatsapp: school.whatsapp,
+        is_published: false,
+      })
+      localStorage.removeItem('pendingSchool')
+      router.push('/dashboard?welcome=1')
+    } else {
+      // Email confirmation required â show success message
+      setStep(3)
     }
-
-    router.push('/dashboard?welcome=1')
+    setLoading(false)
   }
 
   function toggleArrayItem(arr, item) {
@@ -98,6 +118,20 @@ export default function Register() {
         {error && (
           <div style={{ background: '#FEF2F2', border: '1px solid #FCA5A5', borderRadius: 8, padding: 16, marginBottom: 20, color: '#DC2626' }}>
             {error}
+          </div>
+        )}
+
+        {step === 3 && (
+          <div className="detail-section" style={{ textAlign: 'center' }}>
+            <div style={{ fontSize: '3rem', marginBottom: 16 }}>&#x2709;&#xFE0F;</div>
+            <h3>Check Your Email</h3>
+            <p style={{ color: 'var(--text-secondary)', marginTop: 12, lineHeight: 1.7 }}>
+              We sent a confirmation link to <strong>{account.email}</strong>.<br />
+              Click the link in the email to activate your account, then you will be redirected to your dashboard.
+            </p>
+            <p style={{ color: 'var(--text-secondary)', marginTop: 16, fontSize: '0.85rem' }}>
+              Did not receive it? Check your spam folder or <button onClick={() => setStep(1)} style={{ background: 'none', border: 'none', color: 'var(--primary)', cursor: 'pointer', fontWeight: 600, fontSize: '0.85rem' }}>try again with a different email</button>.
+            </p>
           </div>
         )}
 
