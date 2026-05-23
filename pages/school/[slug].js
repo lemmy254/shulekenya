@@ -175,7 +175,7 @@ export default function SchoolDetail() {
           )}
 
           {/* Extracurriculars */}
-          {school.extracurriculars?.length > 0 && (
+  backgroundColor: 'var(--primary-light)', backgroundSize: 'cover', backgroundPosition: 'center'        {school.extracurriculars?.length > 0 && (
             <div className="detail-section">
               <h3>Extracurricular Activities</h3>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
@@ -203,7 +203,7 @@ export default function SchoolDetail() {
               <h3>Photos</h3>
               <div className="photo-grid">
                 {school.photos.map((p, i) => (
-                  <div key={i} className="photo-item" style={{ backgroundImage: `url(${getPhotoUrl(p)})`, background: 'var(--primary-light)' }} />
+                  <div key={i} className="photo-item" style={{ backgroundImage: `url(${getPhotoUrl(p)})`, backgroundColor: 'var(--primary-light)', backgroundSize: 'cover', backgroundPosition: 'center' }} />
                 ))}
               </div>
             </div>
