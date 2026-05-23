@@ -118,15 +118,16 @@ export default function Dashboard() {
     setTimeout(() => setMsg(''), 3000)
   }
 
-  async function publishSchool() {
+  async function submitForReview() {
     const { error } = await supabase
       .from('schools')
-      .update({ is_published: !school.is_published })
+      .update({ review_status: 'pending_review' })
       .eq('id', school.id)
     if (!error) {
-      setSchool({ ...school, is_published: !school.is_published })
-      setMsg(school.is_published ? 'School unpublished' : 'School is now live!')
+      setSchool({ ...school, review_status: 'pending_review' })
+      setMsg('Your school has been submitted for review! The admin will review it shortly and you will be notified once approved.')
     }
+    setTimeout(() => setMsg(''), 6000)
   }
 
   // PHOTO UPLOADS
@@ -247,12 +248,23 @@ export default function Dashboard() {
             <h1 style={{ fontSize: '1.8rem', fontWeight: 700 }}>School Dashboard</h1>
             <p style={{ color: 'var(--text-secondary)' }}>{school.name} â {school.county}</p>
           </div>
-          <div style={{ display: 'flex', gap: 12 }}>
-            <button className="btn btn-outline" onClick={publishSchool}>
-              {school.is_published ? 'Unpublish' : 'Publish School'}
-            </button>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+            {school.review_status === 'approved' && school.is_published && (
+              <span style={{ background: '#dcfce7', color: '#166534', padding: '6px 14px', borderRadius: 20, fontSize: '0.85rem', fontWeight: 600 }}>Live</span>
+            )}
+            {school.review_status === 'pending_review' && (
+              <span style={{ background: '#fef3c7', color: '#92400e', padding: '6px 14px', borderRadius: 20, fontSize: '0.85rem', fontWeight: 600 }}>Under Review</span>
+            )}
+            {school.review_status === 'rejected' && (
+              <span style={{ background: '#fee2e2', color: '#991b1b', padding: '6px 14px', borderRadius: 20, fontSize: '0.85rem', fontWeight: 600 }}>Changes Requested</span>
+            )}
+            {(!school.review_status || school.review_status === 'draft' || school.review_status === 'rejected') && (
+              <button className="btn btn-primary" onClick={submitForReview}>
+                {school.review_status === 'rejected' ? 'Resubmit for Review' : 'Submit for Review'}
+              </button>
+            )}
             {school.is_published && school.slug && (
-              <a href={`/school/${school.slug}`} target="_blank" rel="noreferrer" className="btn btn-primary">
+              <a href={`/school/${school.slug}`} target="_blank" rel="noreferrer" className="btn btn-outline">
                 View Public Profile
               </a>
             )}
@@ -260,9 +272,20 @@ export default function Dashboard() {
         </div>
 
         {/* Status banner */}
-        {!school.is_published && (
+        {(!school.review_status || school.review_status === 'draft') && (
           <div style={{ background: 'var(--accent-light)', border: '1px solid #FFCC80', borderRadius: 8, padding: 16, marginBottom: 24 }}>
-            <strong>Your school is not published yet.</strong> Complete your profile and click &quot;Publish School&quot; to make it visible to parents.
+            <strong>Your school is not published yet.</strong> Complete your profile and click &quot;Submit for Review&quot; to request admin approval.
+          </div>
+        )}
+        {school.review_status === 'pending_review' && (
+          <div style={{ background: '#EFF6FF', border: '1px solid #93C5FD', borderRadius: 8, padding: 16, marginBottom: 24 }}>
+            <strong>Your school is under review.</strong> The ShuleKenya admin will review your listing and approve it shortly. You can still edit your profile while waiting.
+          </div>
+        )}
+        {school.review_status === 'rejected' && (
+          <div style={{ background: '#fee2e2', border: '1px solid #FCA5A5', borderRadius: 8, padding: 16, marginBottom: 24 }}>
+            <strong>Changes requested by admin:</strong> {school.review_notes || 'Please review your listing and resubmit.'}
+            <br /><span style={{ fontSize: '0.85rem', marginTop: 4, display: 'inline-block' }}>Make the requested changes and click &quot;Resubmit for Review&quot;.</span>
           </div>
         )}
 
